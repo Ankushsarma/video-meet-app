@@ -1,7 +1,6 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -9,29 +8,38 @@ const io = new Server(server);
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 
-// Root route → render a single global session
-app.get("/", (req, res) => {
-  res.render("room");
-});
+const ROOM_ID = "main-room";
+const usersInRoom = new Set();
 
-// WebSocket logic (all users in "global" session)
-const users = new Set();
+app.get("/", (req, res) => res.redirect(`/${ROOM_ID}`));
+app.get("/:roomId", (req, res) => res.render("room", { roomId: req.params.roomId }));
 
 io.on("connection", socket => {
-  users.forEach(userId => {
-    socket.emit("user-connected", userId); // let new user know about existing users
-  });
+  socket.on("join-room", userId => {
+    socket.join(ROOM_ID);
 
-  users.add(socket.id);
-  socket.broadcast.emit("user-connected", socket.id); // tell others new user joined
+    // Send existing users to the new user
+    const existingUsers = Array.from(usersInRoom);
+    socket.emit("existing-users", existingUsers);
 
-  socket.on("disconnect", () => {
-    users.delete(socket.id);
-    socket.broadcast.emit("user-disconnected", socket.id);
+    // Notify others
+    socket.to(ROOM_ID).emit("user-connected", userId);
+
+    usersInRoom.add(userId);
+
+    socket.on("disconnect", () => {
+      usersInRoom.delete(userId);
+      socket.to(ROOM_ID).emit("user-disconnected", userId);
+    });
+
+    socket.on("camera-toggle", (userId, isOn) => {
+      socket.to(ROOM_ID).emit("camera-toggled", userId, isOn);
+    });
+
+    socket.on("mic-toggle", (userId, isOn) => {
+      socket.to(ROOM_ID).emit("mic-toggled", userId, isOn);
+    });
   });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () =>
-  console.log(`✅ Server running at http://localhost:${PORT}`)
-);
+server.listen(3000, () => console.log("Server running on http://localhost:3000"));
