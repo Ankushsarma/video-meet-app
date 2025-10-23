@@ -65,7 +65,7 @@ HTML
 🧑‍💻 How to Use
 Start the Server: Execute node server.js.
 
-Access the Application: Open your web browser and navigate to http://localhost:3000.
+Access the Application: Open your web browser and navigate to http://localhost:3000.](https://video-meet-app-4cgf.onrender.com/main-room)
 
 Join the Room: The application will automatically redirect you to the default room (/main-room).
 
